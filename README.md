@@ -6,6 +6,8 @@
 
 # Homelab Guardian
 
+## Still a work in progress 
+
 A clean, real-time **Streamlit dashboard** to monitor my homelab at a glance.
 
 Built for a Proxmox + Docker environment running Jellyfin, *arr stack, Nextcloud, Home Assistant, and many other services.
