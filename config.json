@@ -1,18 +1,18 @@
 {
   "hosts": [
     {
-      "name": "Main Media Server",
-      "host": "192.168.1.50",
-      "user": "yourusername",
-      "key_path": "/home/{USERNAME}/.ssh/id_XXXXXXX",   
+      "name": "Jellyfin VM",
+      "host": "192.168.1.33",
+      "user": "YOUR_USERNAME_HERE",
+      "key_path": "/path/to/your/private/key",
       "port": 22
     },
     {
-      "name": "Services VM",
-      "host": "192.168.1.51",
-      "user": "yourusername",
-      "key_path": "/home/{USERNAME}/.ssh/id_XXXXXXX",
-      "port": 22,
+      "name": "Webserver VM",
+      "host": "192.168.1.84",
+      "user": "YOUR_USERNAME_HERE",
+      "key_path": "/path/to/your/private/key",
+      "port": 22
     }
   ]
 }
