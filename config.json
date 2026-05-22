@@ -4,15 +4,15 @@
       "name": "Main Media Server",
       "host": "192.168.1.50",
       "user": "yourusername",
-      "port": 22,
-      "method": "ssh"
+      "key_path": "/home/{USERNAME}/.ssh/id_XXXXXXX",   
+      "port": 22
     },
     {
       "name": "Services VM",
       "host": "192.168.1.51",
       "user": "yourusername",
+      "key_path": "/home/{USERNAME}/.ssh/id_XXXXXXX",
       "port": 22,
-      "method": "ssh"
     }
   ]
 }
