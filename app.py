@@ -25,8 +25,8 @@ if selected_host_name == "Local Docker":
         client = docker.from_env(timeout=10)
         containers = client.containers.list(all=True)
         st.sidebar.success(f"✅ Local Docker ({len(containers)} containers)")
-    except:
-        st.sidebar.error("Could not connect to local Docker")
+    except Exception as e:
+        st.sidebar.error(f"Local Docker connection failed: {str(e)[:80]}")
 else:
     host_config = next((h for h in config.get("hosts", []) if h["name"] == selected_host_name), None)
     if host_config:
@@ -43,7 +43,7 @@ else:
                     timeout=15
                 )
                 
-                # Get detailed container list
+                # Get container list
                 _, stdout, _ = ssh.exec_command("docker ps -a --format '{{.Names}}|{{.Status}}|{{.Image}}'")
                 output = stdout.read().decode()
                 
@@ -63,16 +63,15 @@ else:
             except Exception as e:
                 st.sidebar.error(f"Connection failed: {str(e)[:100]}")
 
-# Dashboard
+# === Dashboard ===
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Containers", len(containers))
-running = len([c for c in containers if c.get('status') == "up"])
+running = len([c for c in containers if (isinstance(c, dict) and c.get('status') == "up") or (hasattr(c, 'status') and c.status == "running")])
 col2.metric("Running", running)
 col3.metric("Host", selected_host_name)
 
 st.subheader("Service Status")
 
-# Configurable Service Mappings
 common_services = {
     "Jellyfin": ["jellyfin"],
     "Radarr": ["radarr"],
@@ -101,8 +100,10 @@ i = 0
 for display_name, keywords in common_services.items():
     status = "❌ Not Found"
     for c in containers:
-        if any(kw.lower() in c['name'].lower() for kw in keywords):
-            status = "🟢 Running" if c['status'] == "up" else f"🔴 {c['status'].title()}"
+        name = c.get('name') if isinstance(c, dict) else getattr(c, 'name', '')
+        if any(kw.lower() in name.lower() for kw in keywords):
+            status_raw = c.get('status') if isinstance(c, dict) else getattr(c, 'status', '')
+            status = "🟢 Running" if status_raw in ["up", "running"] else f"🔴 {status_raw.title()}"
             break
     with cols[i % 4]:
         st.metric(display_name, status)
@@ -110,7 +111,20 @@ for display_name, keywords in common_services.items():
 
 st.subheader("All Docker Containers on this Host")
 if containers:
-    data = [{"Name": c['name'], "Status": c['status'].title(), "Image": c['image']} for c in containers]
+    data = []
+    for c in containers:
+        if isinstance(c, dict):
+            data.append({
+                "Name": c.get('name', 'N/A'),
+                "Status": c.get('status', 'N/A').title(),
+                "Image": c.get('image', 'N/A')
+            })
+        else:
+            data.append({
+                "Name": getattr(c, 'name', 'N/A'),
+                "Status": getattr(c, 'status', 'N/A').title(),
+                "Image": getattr(c, 'image', 'N/A').tags[0] if getattr(c, 'image', None) else 'N/A'
+            })
     st.dataframe(data, use_container_width=True)
 else:
     st.info("No containers found on selected host.")
