@@ -43,38 +43,36 @@ else:
                     timeout=15
                 )
                 
-                # Get container list via SSH
-                _, stdout, _ = ssh.exec_command("docker ps -a --format '{{json .}}'")
+                # Get detailed container list
+                _, stdout, _ = ssh.exec_command("docker ps -a --format '{{.Names}}|{{.Status}}|{{.Image}}'")
                 output = stdout.read().decode()
                 
                 containers = []
                 for line in output.strip().split('\n'):
                     if line:
-                        try:
-                            c = json.loads(line)
-                            containers.append(type('obj', (object,), {
-                                'name': c.get('Names', 'unknown'),
-                                'status': c.get('Status', '').split()[0],
-                                'image': c.get('Image', 'unknown')
-                            }))
-                        except:
-                            pass
+                        parts = line.split('|')
+                        if len(parts) >= 3:
+                            containers.append({
+                                'name': parts[0],
+                                'status': parts[1].split()[0].lower(),
+                                'image': parts[2]
+                            })
                 
                 st.sidebar.success(f"✅ Connected to {selected_host_name} ({len(containers)} containers)")
                 ssh.close()
             except Exception as e:
                 st.sidebar.error(f"Connection failed: {str(e)[:100]}")
 
-# === Dashboard Display ===
+# Dashboard
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Containers", len(containers))
-running = len([c for c in containers if getattr(c, 'status', '') == "running"])
+running = len([c for c in containers if c.get('status') == "up"])
 col2.metric("Running", running)
 col3.metric("Host", selected_host_name)
 
 st.subheader("Service Status")
 
-# Service mappings
+# Configurable Service Mappings
 common_services = {
     "Jellyfin": ["jellyfin"],
     "Radarr": ["radarr"],
@@ -103,16 +101,16 @@ i = 0
 for display_name, keywords in common_services.items():
     status = "❌ Not Found"
     for c in containers:
-        if any(kw.lower() in getattr(c, 'name', '').lower() for kw in keywords):
-            status = "🟢 Running" if getattr(c, 'status', '') == "running" else f"🔴 {getattr(c, 'status', 'Unknown')}"
+        if any(kw.lower() in c['name'].lower() for kw in keywords):
+            status = "🟢 Running" if c['status'] == "up" else f"🔴 {c['status'].title()}"
             break
     with cols[i % 4]:
         st.metric(display_name, status)
     i += 1
 
-st.subheader("All Docker Containers")
+st.subheader("All Docker Containers on this Host")
 if containers:
-    data = [{"Name": getattr(c, 'name', 'N/A'), "Status": getattr(c, 'status', 'N/A').title(), "Image": getattr(c, 'image', 'N/A')} for c in containers]
+    data = [{"Name": c['name'], "Status": c['status'].title(), "Image": c['image']} for c in containers]
     st.dataframe(data, use_container_width=True)
 else:
     st.info("No containers found on selected host.")
